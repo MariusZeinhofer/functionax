@@ -1,4 +1,4 @@
-name: sample_project
+name: functionax
 channels:
   - defaults
 dependencies:
