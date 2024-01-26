@@ -1,7 +1,7 @@
 [project]
-name = "sample"
+name = "functionax"
 version = "0.0.0"
-description = "A sample project."
+description = "Second-order optimization derived from an infinite dimensional viewpoint."
 
 [project.optional-dependencies]
 lint = ["ruff"]
