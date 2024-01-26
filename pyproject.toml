@@ -1,0 +1,26 @@
+[project]
+name = "sample"
+version = "0.0.0"
+description = "A sample project."
+
+[project.optional-dependencies]
+lint = ["ruff"]
+test = ["pytest"]
+
+[tool.ruff]
+# I001: Import block is un-sorted or un-formatted
+# E731: Do not assign a lambda expression, use a def 
+# F401: {name} imported but unused; consider using importlib.util.find_spec to test for availability
+fixable = ["I001", "F401"]
+ignore = ["E731"]
+select = ["E", "F", "I001"]
+src = []
+
+# Force every function to have a docstring
+[tool.ruff.lint]
+extend-select = [
+  "D",   # pydocstyle
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

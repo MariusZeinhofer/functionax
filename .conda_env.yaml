@@ -1,0 +1,8 @@
+name: sample_project
+channels:
+  - defaults
+dependencies:
+  - python=3.9.16
+  - pip=23.1.2
+  - pip:
+    - -e ."[lint,test]"
