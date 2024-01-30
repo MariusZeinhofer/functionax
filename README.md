@@ -22,7 +22,7 @@ You can set up the `conda` environment and activate it
 
 ```bash
 conda env create --file .conda_env.yaml
-conda activate sample_project
+conda activate functionax
 ```
 
 ## No Conda: Editable Install with PIP
@@ -33,6 +33,12 @@ in editable mode using:
 ```bash
 pip install -e ."[lint,test]"
 ```
+
+## Set up Jax
+
+The installation of Jax depends on the operating system and the hardware.
+Consult [jax installation guide](https://github.com/google/jax?tab=readme-ov-file).
+
 
 ## Linting and Formatting
 
