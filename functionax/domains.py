@@ -293,4 +293,4 @@ class LShapeBoundary(Domain):
                 (-1, 2),
             )
 
-    pass
+    
