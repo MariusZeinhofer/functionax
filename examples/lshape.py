@@ -2,7 +2,7 @@ from functionax.domains import LShape, LShapeBoundary
 from jax import random, vmap, jit, grad, jacrev, jvp, vjp
 
 import jax.numpy as jnp
-from utils import mlp, init_params, laplace
+from utils import mlp, init_params, laplace, grid_line_search_factory
 from matplotlib import pyplot as plt
 from jax.flatten_util import ravel_pytree
 
@@ -51,3 +51,23 @@ def boundary_loss(params, x_Gamma):
 @jit
 def loss(params, x_Omega):
     return interior_loss(params, x_Omega) + boundary_loss(params, x_Gamma)
+
+
+# set up grid line search
+grid = jnp.linspace(0, 30, 31)
+steps = 0.5**grid
+grid_line_search_update = grid_line_search_factory(loss, x_Omega, steps)
+
+
+# errors
+error = lambda x: jnp.reshape(model(params, x) - u_star(x), ())
+v_error = vmap(error, (0))
+v_error_abs_grad = vmap(lambda x: jnp.sum(jacrev(error)(x) ** 2.0) ** 0.5)
+
+
+def l2_norm(f, x_eval):
+    return (1 / 3) * jnp.mean((f(x_eval)) ** 2.0) ** 0.5
+
+
+l2_error = l2_norm(v_error, x_Eval)
+h1_error = l2_error + l2_norm(v_error_abs_grad, x_Eval)

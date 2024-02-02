@@ -79,7 +79,7 @@ def laplace(func, argnum=0):
     )
 
 
-def grid_line_search_factory_adaptive(loss, x_Omega, steps):
+def grid_line_search_factory(loss, x_Omega, steps):
     """
     Parameters
     ----------
