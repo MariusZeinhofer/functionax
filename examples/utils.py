@@ -5,7 +5,9 @@ Contains several needed utility functions:
 
 """
 import jax.numpy as jnp
-from jax import random, hessian, jit, vmap
+from jax import random, hessian, jit, vmap, jacrev, jacfwd
+from jax.flatten_util import ravel_pytree
+
 
 
 # ------Copied from Jax documentation-----
@@ -114,3 +116,70 @@ def grid_line_search_factory(loss, x_Omega, steps):
         ], step_size
 
     return grid_line_search_update
+
+
+
+def gram_factory(v_residual):
+    """
+    ...
+    
+    Parameters
+    ----------
+    residual: Callable
+        Of signature (PyTree, (d_in,)) -> (d_res,) where PyTree may or
+        may not be flattened.
+
+    Returns 
+    -----
+    A callable gramian function with input: params and points 
+    """
+
+    def gramian(*params, x):
+        """
+        ...
+
+        Parameters
+        ----------
+        params:
+            one or more PyTrees.
+
+        x:
+            Array of shape (N, d_in)
+
+        """
+        # flatten params to enable correct jacobian compuations
+        f_params, unravel = ravel_pytree(params[0])
+
+        # For long flat jacobians we use reverse mode autodiff.
+        if len(f_params) > len(x):
+            jac = jacrev
+
+        # for tall slim jacobians we use forward mode autodiff.
+        else:
+            jac = jacfwd
+
+        # Compute the jacobian on batched data
+        J = jac(lambda f_params, x: v_residual(unravel(f_params), x), argnums=0)(f_params, x=x)
+
+        return 1.0 / len(x) * jnp.transpose(J) @ J
+
+    return gramian
+
+
+
+def accumulate(splits, argname):
+    def _accumulate(f):
+        def T_f(*args, **kwargs):
+            Xs = jnp.array_split(kwargs[argname], splits, axis=0)
+            print(kwargs[argname])
+            N_total = len(kwargs[argname])
+
+            sums = 0
+            
+            for x in Xs:
+                N_batch = len(x)
+                kwargs[argname] = x
+                sums += (N_batch/N_total) * f(*args, **kwargs)
+            return sums
+        return T_f
+    return _accumulate 

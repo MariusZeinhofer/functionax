@@ -1,7 +1,6 @@
 """ 
 Contains functions needed to define 
 the singular solution for the Lshape domain 
-
 """
 
 from functionax.domains import LShape, LShapeBoundary
