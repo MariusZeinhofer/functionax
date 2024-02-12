@@ -171,7 +171,6 @@ def accumulate(splits, argname):
     def _accumulate(f):
         def T_f(*args, **kwargs):
             Xs = jnp.array_split(kwargs[argname], splits, axis=0)
-            print(kwargs[argname])
             N_total = len(kwargs[argname])
 
             sums = 0

@@ -122,10 +122,25 @@ u_star_v = vmap(u_star, (0))
 
 if __name__ == "__main__":
     ## test the solution
-    domain = LShape()
-    x_Eval = domain.sample_uniform(random.PRNGKey(1), N=30000)
-    plt.scatter(x_Eval[:, 0], x_Eval[:, 1], s=10, c=jnp.array(u_star_v(x_Eval)))
-    plt.gca().set_aspect(1.0)
-    plt.colorbar()
+    #domain = LShape()
+    #x_Eval = domain.sample_uniform(random.PRNGKey(1), N=30000)
+    #plt.scatter(x_Eval[:, 0], x_Eval[:, 1], s=10, c=jnp.array(u_star_v(x_Eval)))
+    #plt.gca().set_aspect(1.0)
+    #plt.colorbar()
 
-    plt.show()
+    #plt.show()
+
+
+    import jax.numpy as jnp
+    from matplotlib import pyplot as plt
+
+
+    for iteration in range(1,7): 
+        x_Omega = jnp.load('{}{}{}'.format("adaptive_", float(iteration),".npy"))
+        plt.scatter(x_Omega[:, 0], x_Omega[:, 1], s=3)
+        plt.gca().set_aspect(1.0)
+        plt.colorbar()
+        
+        plt.show()
+       
+

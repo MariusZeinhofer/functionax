@@ -100,7 +100,7 @@ class Hyperrectangle(Domain):
 
     @jaxtyped
     # @typechecker
-    def sample_uniform(self, key: Any, N: int = 50) -> Float[Array, "N d"]:
+    def sample_uniform(self, key: Any, N: int = 50): #-> Float[Array, "N d"]:
         """
         N uniformly drawn collocation points in the hyperrectangle.
 
@@ -230,7 +230,7 @@ class LShapeBoundary(Domain):
 
     def sample_uniform(
         self, key, side_number=slice(0, 8), N: int = 50
-    ) -> Float[Array, "N 2"]:
+    ): # -> Float[Array, "N 2"]:
         keys = random.split(key, num=5)
 
         # side 0
@@ -239,7 +239,7 @@ class LShapeBoundary(Domain):
         # number of points weighted by length of the interval
         M_0 = jnp.maximum(math.ceil((b_0 - a_0) * N), 1)
         points_0 = random.uniform(keys[0], (M_0, 1), minval=a_0, maxval=b_0)
-        # the points on this side have y = -1
+        # the points on this side have y r= -1
         side0_y = -1 * jnp.ones(shape=(M_0, 1))
         side_0 = jnp.concatenate([points_0, side0_y], axis=1)
 
