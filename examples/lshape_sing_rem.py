@@ -13,10 +13,11 @@ jax.config.update("jax_enable_x64", True)
 # set the domain and the points for training and the points for evaluating
 domain = LShape()
 x_Omega = domain.sample_uniform(random.PRNGKey(0), N=10000)
-x_Eval = domain.sample_uniform(random.PRNGKey(1), N=20000)
+x_Eval = domain.sample_uniform(random.PRNGKey(1), N=10000)
 # set the domian boundary and its training points
 domain_boundary = LShapeBoundary()
-x_Gamma = domain_boundary.sample_uniform(random.PRNGKey(2), side_number=None, N=40)
+N_Gamma = 40 
+x_Gamma = domain_boundary.sample_uniform(random.PRNGKey(2), side_number=None, N=N_Gamma)
 
 # define the neural network functions
 activation = lambda x: jnp.tanh(x)
@@ -34,7 +35,7 @@ u_star_v = vmap(u_star, (0))
 
 
 # interior residual and loss function
-interior_res = lambda params, x: jnp.reshape(laplace(model, argnum=1)(params, x) + f(x), ())
+interior_res = lambda params, x: jnp.reshape(laplace(model, argnum=1)(params, x) + fw(x), ())
 v_interior_res = vmap(interior_res, (None, 0))
 
 def interior_loss(params, x_Omega):
@@ -42,7 +43,7 @@ def interior_loss(params, x_Omega):
 
 
 # boundary residual and loss function
-boundary_res = lambda params, x: jnp.reshape(model(params, x) - u_star(x), ())
+boundary_res = lambda params, x: jnp.reshape(model(params, x) - w(x), ())
 v_boundary_res = vmap(boundary_res, (None, 0))
 
 
@@ -50,10 +51,40 @@ def boundary_loss(params, x_Gamma):
     return 1.0 / 2.0 * jnp.mean(v_boundary_res(params, x_Gamma) ** 2)
 
 
+
+## H1/2 contribution
+import numpy as np
+
+x_h12 = [] 
+
+for side_number in range(6): 
+  x1 = domain_boundary.sample_uniform(random.PRNGKey(2), side_number = side_number, N=N_Gamma) 
+  x2 = domain_boundary.sample_uniform(random.PRNGKey(3), side_number = side_number, N=N_Gamma)
+  x12 = np.stack([[[x,y] for x,y in list(zip(x1,x2))]])
+  x12 = jnp.reshape(x12, (N_Gamma,2,2))
+  x_h12.append(x12) 
+
+from jax import lax 
+
+def h12_func_cond(params, x): 
+  return lax.cond(jnp.sum(jnp.abs(x[0]-x[1])) > 0, lambda params,x : jnp.reshape((model(params,x[0]) -u_star(x[0]) - model(params,x[1]) + u_star(x[1]))/(jnp.sum(jnp.abs(x[0]-x[1]))),()),
+                  lambda params, x: 0.0, 
+                  params, x
+                  )
+v_h12_cond = vmap(h12_func_cond, (None, 0))
+
+def h12_loss(params): 
+  loss = 0.0 
+  for side_number in range(6): 
+    loss += 1./2.*jnp.mean(v_h12_cond(params, x_h12[side_number])**2) 
+  return loss 
+
+
 # total loss function
 @jit
 def loss(params, x_Omega):
-    return interior_loss(params, x_Omega) + boundary_loss(params, x_Gamma)
+    return interior_loss(params, x_Omega) + boundary_loss(params, x_Gamma) + h12_loss(params)
+
 
 
 # set up grid line search
@@ -63,7 +94,7 @@ grid_line_search_update = grid_line_search_factory(loss, x_Omega, steps)
 
 
 # errors
-error = lambda x: jnp.reshape(model(params, x) - u_star(x), ())
+error = lambda x: jnp.reshape(model(params, x) + eta(x, 1/2) * s(x) - u_star(x), ())
 v_error = vmap(error, (0))
 v_error_abs_grad = vmap(lambda x: jnp.sum(jacrev(error)(x) ** 2.0) ** 0.5)
 
@@ -78,14 +109,16 @@ h1_error  = l2_error + l2_norm(v_error_abs_grad, x_Eval)
 
 gram_int  = jit(accumulate(30,'x')(gram_factory(v_interior_res)))
 gram_bdry = jit(gram_factory(v_boundary_res))
+gram_h12_bdry = jit(gram_factory(v_h12_cond))
 
 VERBOSE = True
-LM = 1e-07
+LM = 1e-8
+
 adaptive_interior = False
 key = random.PRNGKey(10) 
 key, subkey = random.split(key)
 # natural gradient descent with line search
-for iteration in range(5000):
+for iteration in range(1000):
     
     # compute gradient of loss
     grads = grad(loss)(params,x_Omega)
@@ -95,7 +128,8 @@ for iteration in range(5000):
     G_int  = gram_int(params,  x= x_Omega)
     G_bdry = gram_bdry(params, x= x_Gamma)
     G      = G_int + G_bdry
-
+    #for i in range(6): 
+    #  G +=  gram_h12_bdry(params, x = x_h12[i])
     # Marquardt-Levenberg
     Id = jnp.identity(len(G))
     G = jnp.min(jnp.array([loss(params,x_Omega), LM])) * Id + G
@@ -137,20 +171,20 @@ for iteration in range(5000):
             jnp.save('{}{}{}'.format("adaptive_", (iteration/100) ,".npy") , x_Omega)
             # advance random number generator
             key, subkey= random.split(key)
-    
+
+ 
 l2_error = l2_norm(v_error, x_Eval)
 h1_error = l2_error + l2_norm(v_error_abs_grad, x_Eval)
 print(f'POISSON EQUATION: loss {loss(params,x_Omega)}, L2 {l2_error}, H1 {h1_error}')
 
 visualize = True 
 if visualize: 
+    x_Eval = domain.sample_uniform(random.PRNGKey(1), N=150000)
 
-    plt.scatter(x_Eval[:, 0], x_Eval[:, 1], s=50, c=vmap(model, (None, 0))(params, x_Eval))
-    plt.gca().set_aspect(1.0)
-    plt.colorbar()
-    plt.show()
+    # save the evaluation points, network solution, and pointwise error as .npy files  for visualizing 
+    network_sol = lambda x: jnp.reshape(model(params, x)+ eta(x,1/2)*s(x),())
+    jnp.save('eval_points.npy', jnp.asarray(x_Eval))
+    jnp.save('network_solution.npy', jnp.array(vmap(network_sol,(0))(x_Eval)))
+    jnp.save('pointwise_error.npy', jnp.array(v_error(x_Eval)))
 
-    plt.scatter(x_Eval[:, 0], x_Eval[:, 1], s=50, c=v_error(x_Eval))
-    plt.gca().set_aspect(1.0)
-    plt.colorbar()
-    plt.show()
+    

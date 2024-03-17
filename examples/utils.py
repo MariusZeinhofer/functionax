@@ -7,6 +7,8 @@ Contains several needed utility functions:
 import jax.numpy as jnp
 from jax import random, hessian, jit, vmap, jacrev, jacfwd
 from jax.flatten_util import ravel_pytree
+import jax 
+jax.config.update("jax_enable_x64", True)
 
 
 

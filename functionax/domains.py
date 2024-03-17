@@ -8,7 +8,8 @@ import jax.numpy as jnp
 from jax.random import uniform, randint
 from jax import random
 import math
-
+import jax 
+jax.config.update("jax_enable_x64", True)
 
 class Domain(metaclass=abc.ABCMeta):
     """Abstract base class for computational domains.
@@ -287,7 +288,7 @@ class LShapeBoundary(Domain):
         if side_number == None:
             return jnp.reshape(jnp.array(sides), (-1, 2))
         else:
-            print(jnp.array(sides[side_number]))
+            # print(jnp.array(sides[side_number]))
             return jnp.reshape(
                 jnp.array(sides[side_number]),
                 (-1, 2),
